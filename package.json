@@ -1,0 +1,31 @@
+{
+  "name": "any-video-downloader",
+  "version": "1.0.0",
+  "description": "Universal Video & Audio Downloader Web Application supporting 1800+ sites with quality selector and streaming",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "deploy": "git add . && git commit -m 'Auto update' && git push"
+  },
+  "keywords": [
+    "video-downloader",
+    "yt-dlp",
+    "ffmpeg",
+    "media-downloader",
+    "universal-downloader"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "archiver": "^8.0.0",
+    "cheerio": "^1.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "morgan": "^1.10.0",
+    "sanitize-filename": "^1.6.3"
+  }
+}

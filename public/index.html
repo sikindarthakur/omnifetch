@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniFetch - Universal Media & Video Downloader</title>
+  <meta name="description" content="Fast, high-quality media downloader for personal backup from Instagram, YouTube, TikTok, Twitter/X, Reddit, Facebook, Vimeo, and the web.">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/animations.css">
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <a href="/" class="logo">
+        <div class="logo-icon">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+        </div>
+        <div>
+          <span class="logo-text">OmniFetch</span>
+        </div>
+        <span class="logo-badge">UNIVERSAL</span>
+      </a>
+
+      <div class="header-status">
+        <span class="status-dot"></span>
+        <span>Fast & Secure Downloader</span>
+      </div>
+    </header>
+
+    <!-- Main Hero -->
+    <main>
+      <section class="hero">
+        <div class="hero-tag">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+          Universal Media Downloader
+        </div>
+        <h1 class="hero-title">
+          Download Any Video & Audio in <br>
+          <span class="gradient-text">Highest Quality</span>
+        </h1>
+        <p class="hero-subtitle">
+          Paste any link from Instagram, YouTube, TikTok, Twitter/X, Reddit, Facebook, or the web to download instantly.
+        </p>
+
+        <!-- Media Mode Selector (Standard vs 18+ Gated) -->
+        <div class="downloader-mode-bar-wrapper">
+          <div class="downloader-mode-bar">
+            <button type="button" class="mode-toggle-btn active" id="mode-btn-standard" data-mode="standard">
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+              </svg>
+              <span>Standard Media</span>
+            </button>
+            <button type="button" class="mode-toggle-btn adult-mode-btn" id="mode-btn-adult" data-mode="adult">
+              <span class="adult-status-dot" id="adult-status-dot"></span>
+              <span>🔞 18+ Adult Sites</span>
+              <span class="adult-badge-tag" id="adult-badge-tag">Click to Unlock</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Downloader Input Box -->
+        <div class="input-card-wrapper" id="input-card-wrapper">
+          <div class="downloader-box">
+            <div class="input-icon">
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+              </svg>
+            </div>
+            <input 
+              type="url" 
+              id="url-input" 
+              class="url-input" 
+              placeholder="Paste any media link here..." 
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <div class="input-actions">
+              <button type="button" id="btn-clear" class="btn-clear" title="Clear input">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+              <button type="button" id="btn-paste" class="btn-paste">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                Paste
+              </button>
+              <button type="button" id="btn-fetch" class="btn-fetch">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                <span>Fetch Media</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Supported Platforms Banner -->
+      <section class="platforms-banner">
+        <div class="platforms-title">Supported Platforms & Networks</div>
+        <div class="platform-badges">
+          <div class="platform-badge" style="color: #e1306c;">
+            <span>●</span> Instagram
+          </div>
+          <div class="platform-badge" style="color: #ff0000;">
+            <span>●</span> YouTube
+          </div>
+          <div class="platform-badge" style="color: #00f2fe;">
+            <span>●</span> TikTok
+          </div>
+          <div class="platform-badge" style="color: #1da1f2;">
+            <span>●</span> Twitter / X
+          </div>
+          <div class="platform-badge" style="color: #ff4500;">
+            <span>●</span> Reddit
+          </div>
+          <div class="platform-badge" style="color: #1877f2;">
+            <span>●</span> Facebook
+          </div>
+          <div class="platform-badge" style="color: #1ab7ea;">
+            <span>●</span> Vimeo
+          </div>
+          <div class="platform-badge adult-badge">
+            <span style="color: #fbbf24;">●</span> Adult Sites (18+)
+          </div>
+          <div class="platform-badge">
+            <span style="color: #10b981;">●</span> Web Media
+          </div>
+        </div>
+      </section>
+
+      <!-- Loading State Box -->
+      <section id="loading-box" class="loading-box">
+        <div class="spinner"></div>
+        <div class="loading-text">Extracting Media Content...</div>
+        <div class="loading-subtext">Resolving highest quality streams, photos, and audio tracks...</div>
+      </section>
+
+      <!-- Video / Media Result Section -->
+      <section id="result-section" class="result-section">
+        <div class="result-card">
+          <!-- Overview -->
+          <div class="video-overview">
+            <div class="thumbnail-wrapper">
+              <img id="video-thumbnail" class="video-thumbnail" src="" alt="Media Thumbnail" />
+              <span id="video-duration" class="duration-tag">00:00</span>
+              <span id="video-platform-tag" class="platform-tag">Platform</span>
+            </div>
+
+            <div class="video-details">
+              <div>
+                <h2 id="video-title" class="video-title">Media Title Loading...</h2>
+                <div class="video-meta">
+                  <div class="meta-item">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    <span id="video-uploader">Creator</span>
+                  </div>
+                  <div class="meta-item">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    <span id="video-views">Ready</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quick 1-Click Action -->
+              <div class="quick-download-box">
+                <a id="btn-instant-download" href="#" class="btn-instant" download>
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                  </svg>
+                  <span>1-Click Highest Quality Download</span>
+                </a>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Max resolution with merged studio audio</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Carousel Multi-Item Gallery (for Instagram multi-photo posts / albums) -->
+          <div id="carousel-section" class="carousel-section" style="display: none;">
+            <div class="carousel-header">
+              <div class="carousel-title-box">
+                <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#c084fc">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <h3 class="carousel-heading">Post Album Items</h3>
+                <span id="carousel-count-badge" class="carousel-badge">0 Items</span>
+              </div>
+              <a id="btn-download-all-zip" href="#" class="btn-download-zip" download>
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                <span>Download All as ZIP</span>
+              </a>
+            </div>
+            <div id="carousel-grid" class="carousel-grid"></div>
+          </div>
+
+          <!-- Quality Selection -->
+          <div class="quality-container">
+            <div class="quality-header">
+              <h3 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700;">Choose Quality & Format:</h3>
+              <div class="quality-tabs">
+                <button class="tab-btn active" data-tab="presets">
+                  <span>🌟 Recommended</span>
+                  <span id="count-presets" class="format-count-pill">0</span>
+                </button>
+                <button class="tab-btn" data-tab="videos">
+                  <span>🎬 Video Resolutions</span>
+                  <span id="count-videos" class="format-count-pill">0</span>
+                </button>
+                <button class="tab-btn" data-tab="audios">
+                  <span>🎵 Audio (MP3/M4A)</span>
+                  <span id="count-audios" class="format-count-pill">0</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Presets Tab Content -->
+            <div id="list-presets" class="format-list format-list-tab" style="display: grid;"></div>
+
+            <!-- Video Resolutions Tab Content -->
+            <div id="list-videos" class="format-list format-list-tab" style="display: none;"></div>
+
+            <!-- Audio Tab Content -->
+            <div id="list-audios" class="format-list format-list-tab" style="display: none;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features Section -->
+      <section class="features-section">
+        <h2 class="section-title">Why Choose OmniFetch?</h2>
+        <p class="section-subtitle">Engineered for ultra-fast, high-resolution downloads with strict privacy standards.</p>
+
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+            </div>
+            <h3 class="feature-title">Universal Video & Audio Playback</h3>
+            <p class="feature-desc">All videos are encoded in universally compatible H.264 MP4 with studio-clean audio that plays flawlessly on iPhones, Mac, Windows, and Android.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+            </div>
+            <h3 class="feature-title">Multi-Photo Albums & Carousels</h3>
+            <p class="feature-desc">Download individual photos and videos from multi-item albums, or bundle the entire post into a single high-speed ZIP archive.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+              </svg>
+            </div>
+            <h3 class="feature-title">Anti-Crash Fallback Scraper</h3>
+            <p class="feature-desc">Automatic intelligent DOM scraper recovers media streams from web pages with flashvars or custom obfuscations where standard extractors fail.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+              </svg>
+            </div>
+            <h3 class="feature-title">Zero Personal Data Stored</h3>
+            <p class="feature-desc">We never save your downloaded files, search history, or personal identifiers. Streams are routed ephemerally in accordance with GDPR & CCPA privacy laws.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- How it Works -->
+      <section style="padding: 20px 0 60px 0;">
+        <h2 class="section-title">How It Works in 3 Simple Steps</h2>
+        <div class="how-it-works-grid">
+          <div class="step-card">
+            <div class="step-number">1</div>
+            <h3 class="step-title">Paste Media URL</h3>
+            <p class="step-desc">Copy any public video, reel, or photo post URL from a supported site and paste it into the box above.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">2</div>
+            <h3 class="step-title">Select Quality or Format</h3>
+            <p class="step-desc">Choose from 4K, 1080p FHD, 720p HD, 320kbps MP3 audio, or select individual carousel photos/videos.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">3</div>
+            <h3 class="step-title">Download Directly</h3>
+            <p class="step-desc">Click download to save media directly to your PC, Mac, iPhone, or Android device for personal backup.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+      <div class="footer-links">
+        <button type="button" class="footer-link-btn" id="link-privacy">Privacy Policy</button>
+        <button type="button" class="footer-link-btn" id="link-terms">Terms of Service</button>
+        <button type="button" class="footer-link-btn" id="link-dmca">DMCA & Copyright</button>
+        <button type="button" class="footer-link-btn" id="link-supported">Supported Sites</button>
+      </div>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 10px;">
+        © 2026 OmniFetch. All rights reserved. For personal backup and educational fair use only.<br>
+        OmniFetch is not affiliated with, endorsed, or sponsored by YouTube, Meta/Instagram, TikTok, Twitter/X, or any third-party platforms.
+      </p>
+    </footer>
+  </div>
+
+  <!-- 18+ Age & Content Agreement Modal -->
+  <div id="modal-age-gate" class="modal-backdrop">
+    <div class="modal-dialog" style="max-width: 540px;">
+      <div class="modal-header">
+        <div class="modal-title-box">
+          <div class="modal-icon" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; font-size: 1.1rem; font-weight: 700;">
+            🔞
+          </div>
+          <span class="modal-title">Age Verification & Terms Agreement</span>
+        </div>
+        <button class="btn-modal-close" data-close-modal="modal-age-gate">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-weight: 700; color: #fbbf24; font-size: 1.05rem; margin-bottom: 10px;">
+          Activating 18+ Adult Content Mode
+        </p>
+        <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px;">
+          To unlock adult site links (e.g., XVideos, SpankBang, Pornhub, XNXX, etc.) and paste links for personal fair-use backup, you must certify your legal age and agree to our Terms of Service.
+        </p>
+
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 14px; font-size: 0.88rem; color: var(--text-secondary);">
+          <div style="margin-bottom: 6px;">✔️ I certify that I am at least <strong>18 years of age</strong> (or legal majority).</div>
+          <div style="margin-bottom: 6px;">✔️ I will use downloaded content strictly for <strong>personal fair-use archiving</strong>.</div>
+          <div>✔️ I agree to the <a href="#" id="link-modal-terms-inline" style="color: #6366f1; text-decoration: underline;">Terms of Service</a> & Privacy Policy.</div>
+        </div>
+
+        <div class="modal-highlight-box" style="border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.08); font-size: 0.85rem;">
+          ⚠️ If you are under 18 or do not agree, adult mode will remain disabled.
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button id="btn-age-cancel" class="btn-cookie-details" style="padding: 9px 18px;">Under 18 / Cancel</button>
+        <button id="btn-age-confirm" class="btn-modal-action" style="background: linear-gradient(135deg, #f59e0b 0%, #ec4899 100%);">I am 18+ & Agree (Unlock)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Privacy Policy Modal -->
+  <div id="modal-privacy" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-box">
+          <div class="modal-icon">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+          </div>
+          <span class="modal-title">Privacy Policy</span>
+        </div>
+        <button class="btn-modal-close" data-close-modal="modal-privacy">✕</button>
+      </div>
+      <div class="modal-body">
+        <h4>1. Information We Do Not Collect</h4>
+        <p>OmniFetch is committed to strict user privacy. We do not require registration, do not collect personal names, email addresses, phone numbers, or credit card details.</p>
+        
+        <h4>2. Ephemeral Media Processing</h4>
+        <p>When you submit a media URL, our servers analyze public metadata and pipe the media stream directly to your browser client. We do not store, catalog, or archive downloaded media files on our servers.</p>
+
+        <h4>3. Cookies & Local Storage</h4>
+        <p>We use minimal browser local storage strictly to remember your interface preferences (such as cookie consent). We do not deploy third-party advertising tracking cookies or sell your browsing history.</p>
+
+        <h4>4. Compliance with Global Privacy Standards</h4>
+        <p>Our practices comply with the European Union General Data Protection Regulation (GDPR) and California Consumer Privacy Act (CCPA).</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal-action" data-close-modal="modal-privacy">Understood</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Terms of Service Modal -->
+  <div id="modal-terms" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-box">
+          <div class="modal-icon">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <span class="modal-title">Terms of Service</span>
+        </div>
+        <button class="btn-modal-close" data-close-modal="modal-terms">✕</button>
+      </div>
+      <div class="modal-body">
+        <h4>1. Acceptance of Terms</h4>
+        <p>By accessing or using OmniFetch, you agree to be bound by these Terms of Service. If you do not agree, please do not use this service.</p>
+
+        <h4>2. Permitted Fair Use & Purpose</h4>
+        <p>OmniFetch is provided strictly for personal offline archiving, research, and non-commercial educational purposes (fair use). You agree not to use this service for unauthorized commercial redistribution or to infringe copyright.</p>
+
+        <div class="modal-highlight-box">
+          ⚠️ <strong>User Responsibility:</strong> You represent and warrant that you own or have obtained all necessary permissions, licenses, or rights from the content creator before downloading any media.
+        </div>
+
+        <h4>3. Prohibited Activities</h4>
+        <ul>
+          <li>Downloading copyright-protected commercial content without express authorization.</li>
+          <li>Circumventing technical DRM protection or paywalls.</li>
+          <li>Using automated scrapers or bots to disrupt our service availability.</li>
+          <li>Accessing age-restricted (18+) material if you are under the legal age of majority in your jurisdiction.</li>
+        </ul>
+
+        <h4>4. Limitation of Liability</h4>
+        <p>OmniFetch is provided "as is" without warranty of any kind. In no event shall the operators be liable for any damages or legal consequences arising from the use or misuse of this tool.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal-action" data-close-modal="modal-terms">I Agree</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DMCA & Copyright Modal -->
+  <div id="modal-dmca" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-box">
+          <div class="modal-icon">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/>
+            </svg>
+          </div>
+          <span class="modal-title">DMCA & Copyright Disclaimer</span>
+        </div>
+        <button class="btn-modal-close" data-close-modal="modal-dmca">✕</button>
+      </div>
+      <div class="modal-body">
+        <h4>1. Safe Harbor & Media Hosting Notice</h4>
+        <p>OmniFetch does not host, upload, store, or republish any copyrighted media files on our servers. OmniFetch acts solely as a client-side parsing utility connecting to third-party public content delivery networks (CDNs).</p>
+
+        <h4>2. Non-Affiliation Disclaimer</h4>
+        <p>All product names, logos, and brands (including YouTube, Instagram, Meta, TikTok, Twitter/X, Reddit, LinkedIn, Vimeo) are property of their respective owners. Their mention does not imply any affiliation, sponsorship, or endorsement.</p>
+
+        <h4>3. DMCA Takedown Procedure</h4>
+        <p>If you are a copyright owner and wish to request restriction of access to specific public content, please submit a formal notice through your domain administrator or hosting provider with the specific URL and proof of copyright ownership.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal-action" data-close-modal="modal-dmca">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supported Sites Directory Modal -->
+  <div id="modal-supported" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-box">
+          <div class="modal-icon">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+            </svg>
+          </div>
+          <span class="modal-title">Supported Media Platforms</span>
+        </div>
+        <button class="btn-modal-close" data-close-modal="modal-supported">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>OmniFetch supports public URLs from major video and media networks:</p>
+
+        <div class="site-category-box">
+          <div class="site-category-title" style="color: #e1306c;">📸 Social Media Platforms</div>
+          <div class="site-tags-wrapper">
+            <span class="site-tag">Instagram Reels</span>
+            <span class="site-tag">Instagram Photo Albums (ZIP)</span>
+            <span class="site-tag">Instagram Posts</span>
+            <span class="site-tag">TikTok</span>
+            <span class="site-tag">Twitter / X</span>
+            <span class="site-tag">Reddit</span>
+            <span class="site-tag">Facebook</span>
+            <span class="site-tag">Threads</span>
+            <span class="site-tag">Pinterest</span>
+          </div>
+        </div>
+
+        <div class="site-category-box">
+          <div class="site-category-title" style="color: #ff0000;">🎬 Video Platforms</div>
+          <div class="site-tags-wrapper">
+            <span class="site-tag">YouTube (4K / 1080p / 720p)</span>
+            <span class="site-tag">YouTube Shorts</span>
+            <span class="site-tag">Vimeo</span>
+            <span class="site-tag">Dailymotion</span>
+            <span class="site-tag">Twitch Clips</span>
+            <span class="site-tag">Direct MP4/WebM URL Streams</span>
+          </div>
+        </div>
+
+        <div class="site-category-box">
+          <div class="site-category-title" style="color: #0077b5;">💼 Professional & Audio</div>
+          <div class="site-tags-wrapper">
+            <span class="site-tag">LinkedIn Videos</span>
+            <span class="site-tag">LinkedIn Document Albums</span>
+            <span class="site-tag">SoundCloud (MP3)</span>
+            <span class="site-tag">Bandcamp</span>
+          </div>
+        </div>
+
+        <div class="site-category-box adult-badge">
+          <div class="site-category-title" style="color: #fbbf24;">🔞 Adult Networks (18+ Only)</div>
+          <div class="site-tags-wrapper">
+            <span class="site-tag">XVideos</span>
+            <span class="site-tag">SpankBang</span>
+            <span class="site-tag">Pornhub (Public)</span>
+            <span class="site-tag">XNXX</span>
+            <span class="site-tag">RedTube</span>
+            <span class="site-tag">YouPorn</span>
+            <span class="site-tag">Tube8</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">Note: Adult platform downloading is strictly restricted to legal adults (18+) and requires explicit age verification.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal-action" data-close-modal="modal-supported">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cookie Consent Banner -->
+  <div id="cookie-banner" class="cookie-banner" style="display: none;">
+    <div class="cookie-header">
+      <span>🍪</span> Privacy & Preferences
+    </div>
+    <div class="cookie-text">
+      OmniFetch uses local browser storage to save your interface preferences. We do not track you or sell personal data.
+    </div>
+    <div class="cookie-actions">
+      <button id="btn-cookie-privacy" class="btn-cookie-details">Read Policy</button>
+      <button id="btn-cookie-accept" class="btn-cookie-accept">Accept & Continue</button>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Javascript Modules -->
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
