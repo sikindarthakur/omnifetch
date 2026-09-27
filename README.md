@@ -120,6 +120,22 @@ Because OmniFetch relies on `FFmpeg` and `yt-dlp` for video muxing, serverless p
 5. Set the Port environment variable to `3000`.
 6. Click **Deploy Web Service**. Render will build the `Dockerfile` automatically!
 
+### 🍪 Handling YouTube Bot Verification on Cloud Datacenter IPs
+YouTube often enforces automated bot checks ("Sign in to confirm you're not a bot") on datacenter IP addresses (like Render, AWS, DigitalOcean).
+
+OmniFetch automatically rotates mobile and embedded player clients (`android`, `ios`, `mweb`, `tv_embedded`) to bypass these checks. To guarantee 100% reliability for all YouTube links on your cloud server:
+
+**Option 1: Add `YOUTUBE_COOKIES` in your Cloud Dashboard (Recommended for Render/Railway)**
+1. Install a browser extension to export cookies (e.g. "Get cookies.txt LOCALLY" on Chrome/Firefox).
+2. Export your cookies from `youtube.com` as a Netscape-formatted text file.
+3. In your **Render.com / Railway Dashboard** -> **Environment Variables**, add:
+   - Key: `YOUTUBE_COOKIES`
+   - Value: *(Paste the full contents of your exported cookies.txt file)*
+4. OmniFetch will automatically load and authenticate YouTube requests seamlessly!
+
+**Option 2: Place `cookies.txt` in the root folder**
+- Place your `cookies.txt` directly into the project root directory or `server/cookies.txt`. It will be automatically recognized and loaded.
+
 ### Option 2: Railway.app (1-Click Docker)
 1. Open [Railway.app](https://railway.app) and create a **New Project**.
 2. Select **Deploy from GitHub repo**.

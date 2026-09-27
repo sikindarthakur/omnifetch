@@ -96,9 +96,13 @@ router.post('/info', async (req, res) => {
         });
       } catch (scrapeError) {
         console.error(`[SCRAPER FALLBACK FAILED] ${scrapeError.message}`);
+        let displayError = ytdlpError.message || scrapeError.message;
+        if (displayError.includes("Sign in to confirm you're not a bot") || displayError.includes('bot')) {
+          displayError = "YouTube is requesting bot verification on this server IP. To fix this, provide cookies via the YOUTUBE_COOKIES environment variable in your server dashboard or add a cookies.txt file.";
+        }
         return res.status(500).json({
           success: false,
-          error: `Could not extract media: ${ytdlpError.message || scrapeError.message}`
+          error: displayError
         });
       }
     }

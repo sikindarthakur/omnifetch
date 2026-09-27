@@ -1,10 +1,54 @@
-import { spawn } from 'child_process';
-import { existsSync, readdirSync, statSync, createReadStream, unlink } from 'fs';
+import { existsSync, readdirSync, statSync, createReadStream, unlink, writeFileSync } from 'fs';
 import os from 'os';
 import path from 'path';
 import { Readable } from 'stream';
 import { formatBytes, formatDuration, detectPlatform, sanitizeDownloadName } from './helpers.js';
 import { mediaInfoCache } from './cache.js';
+
+let cachedCookiePath = null;
+
+/**
+ * Resolve cookies for yt-dlp from environment variables, files, or project root
+ * @returns {string[]}
+ */
+export function getCookiesArg() {
+  // 1. Direct environment variable containing raw cookie content (ideal for Render/Railway/Heroku)
+  const envCookieContent = process.env.YTDLP_COOKIES || process.env.YOUTUBE_COOKIES;
+  if (envCookieContent && envCookieContent.trim()) {
+    try {
+      if (!cachedCookiePath || !existsSync(cachedCookiePath)) {
+        cachedCookiePath = path.join(os.tmpdir(), `omnifetch_cookies_${process.pid}.txt`);
+        writeFileSync(cachedCookiePath, envCookieContent.trim(), { encoding: 'utf8' });
+      }
+      return ['--cookies', cachedCookiePath];
+    } catch (e) {
+      console.warn('[COOKIES] Could not write env cookie file:', e.message);
+    }
+  }
+
+  // 2. Direct environment variable pointing to cookie file
+  const envCookieFile = process.env.YTDLP_COOKIES_FILE || process.env.COOKIES_FILE;
+  if (envCookieFile && existsSync(envCookieFile)) {
+    return ['--cookies', envCookieFile];
+  }
+
+  // 3. Local cookie file candidates in project root or server directory
+  const cwd = process.cwd();
+  const candidates = [
+    path.join(cwd, 'cookies.txt'),
+    path.join(cwd, 'youtube_cookies.txt'),
+    path.join(cwd, 'server/cookies.txt'),
+    path.join(cwd, 'server/youtube_cookies.txt')
+  ];
+
+  for (const c of candidates) {
+    if (existsSync(c)) {
+      return ['--cookies', c];
+    }
+  }
+
+  return [];
+}
 
 // Resolve yt-dlp executable path
 export function getYtDlpPath() {
@@ -34,9 +78,49 @@ export async function extractVideoInfo(url) {
   return mediaInfoCache.getOrFetch(url, () => runYtDlpExtract(url));
 }
 
-function runYtDlpExtract(url) {
+async function runYtDlpExtract(url) {
+  const isYouTube = url.includes('youtube.com/') || url.includes('youtu.be/');
+  // Rotate through client profiles for YouTube to bypass bot verification checks on datacenter IPs
+  const clientCombos = isYouTube
+    ? ['android,ios,mweb,web', 'ios,mweb,web', 'mweb,tv_embedded,web', 'android,web']
+    : [null];
+
+  let lastError = null;
+
+  for (const clientCombo of clientCombos) {
+    try {
+      return await executeYtDlpJson(url, clientCombo);
+    } catch (err) {
+      lastError = err;
+      const msg = err.message || '';
+      console.warn(`[YTDLP EXTRACT ATTEMPT] (client: ${clientCombo || 'default'}): ${msg}`);
+
+      // If error indicates unavailable or private video, don't loop
+      if (msg.includes('This video is unavailable') || msg.includes('Private video')) {
+        throw err;
+      }
+
+      // If not a bot or block error, or not YouTube, break immediately
+      if (!isYouTube || (!msg.includes('Sign in to confirm') && !msg.includes('bot') && !msg.includes('HTTP Error 429') && !msg.includes('403'))) {
+        throw err;
+      }
+    }
+  }
+
+  if (isYouTube && lastError && (lastError.message.includes('Sign in to confirm') || lastError.message.includes('bot'))) {
+    throw new Error(
+      "YouTube is requesting bot verification on this server IP. Set the YOUTUBE_COOKIES environment variable in your dashboard or add a cookies.txt file to authenticate."
+    );
+  }
+
+  throw lastError;
+}
+
+function executeYtDlpJson(url, clientCombo = null) {
   return new Promise((resolve, reject) => {
     const ytdlpBin = getYtDlpPath();
+    const cookieArgs = getCookiesArg();
+
     const args = [
       '--dump-json',
       '--no-playlist',
@@ -46,10 +130,17 @@ function runYtDlpExtract(url) {
       '--ignore-errors',
       '--geo-bypass',
       '--skip-download',
-      '--socket-timeout', '15',
+      '--socket-timeout', '20',
+      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
       '--format-sort', 'vcodec:h264,res,acodec:m4a',
-      url
+      ...cookieArgs
     ];
+
+    if (clientCombo) {
+      args.push('--extractor-args', `youtube:player_client=${clientCombo}`);
+    }
+
+    args.push(url);
 
     const proc = spawn(ytdlpBin, args);
     let stdoutData = '';
@@ -456,6 +547,8 @@ export async function streamVideoDownload(options, res) {
   const tempId = `omnifetch_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
   const tempDir = os.tmpdir();
   const tempFileTemplate = path.join(tempDir, `${tempId}.%(ext)s`);
+  const cookieArgs = getCookiesArg();
+  const isYouTube = (url && (url.includes('youtube.com/') || url.includes('youtu.be/')));
 
   const args = [
     '--no-playlist',
@@ -465,10 +558,17 @@ export async function streamVideoDownload(options, res) {
     '--concurrent-fragments', '8',
     '-N', '8',
     '--buffer-size', '64K',
-    '--socket-timeout', '20',
+    '--socket-timeout', '25',
+    '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
     '--format-sort', 'vcodec:h264,res,acodec:m4a',
-    '-f', safeFormat
+    ...cookieArgs
   ];
+
+  if (isYouTube) {
+    args.push('--extractor-args', 'youtube:player_client=android,ios,mweb,web');
+  }
+
+  args.push('-f', safeFormat);
 
   if (isAudioOnly && ext === 'mp3') {
     args.push('-x', '--audio-format', 'mp3', '--audio-quality', '0');
