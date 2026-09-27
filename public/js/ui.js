@@ -200,16 +200,16 @@ function renderPresets(presets, originalUrl, title) {
             : `<svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>`
           }
         </div>
-        <div>
+        <div class="format-text-wrapper">
           <div class="format-meta-title">
             <span>${item.title}</span>
             <span class="format-badge ${badgeClass}">${item.badge || item.ext.toUpperCase()}</span>
           </div>
           <div class="format-subtext">
             <span>Format: <strong>${item.ext.toUpperCase()}</strong></span>
-            <span>•</span>
+            <span class="subtext-dot">•</span>
             <span>${item.quality}</span>
-            <span>•</span>
+            <span class="subtext-dot">•</span>
             <span>Universal Compatibility ✅</span>
           </div>
         </div>
@@ -218,7 +218,7 @@ function renderPresets(presets, originalUrl, title) {
         <span class="format-size">${item.approxSize}</span>
         <a href="${downloadLink}" class="btn-download-item" download>
           <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-          Download
+          <span>Download</span>
         </a>
       </div>
     `;
@@ -253,7 +253,7 @@ function renderVideoList(formats, originalUrl, title) {
         <div class="format-icon-box">
           <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
         </div>
-        <div>
+        <div class="format-text-wrapper">
           <div class="format-meta-title">
             <span>${fmt.resolution} (${fmt.ext.toUpperCase()})</span>
             ${isUhd ? '<span class="format-badge uhd">Ultra HD</span>' : isFhd ? '<span class="format-badge fhd">Full HD</span>' : ''}
@@ -261,7 +261,7 @@ function renderVideoList(formats, originalUrl, title) {
           </div>
           <div class="format-subtext">
             <span>Video Codec: ${fmt.vcodec ? fmt.vcodec.split('.')[0] : 'Universal H.264'}</span>
-            <span>•</span>
+            <span class="subtext-dot">•</span>
             <span>Merged with Studio Audio</span>
           </div>
         </div>
@@ -270,7 +270,7 @@ function renderVideoList(formats, originalUrl, title) {
         <span class="format-size">${fmt.sizeFormatted}</span>
         <a href="${downloadLink}" class="btn-download-item" download>
           <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-          Download
+          <span>Download</span>
         </a>
       </div>
     `;
@@ -303,14 +303,14 @@ function renderAudioList(formats, originalUrl, title) {
         <div class="format-icon-box audio">
           <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
         </div>
-        <div>
+        <div class="format-text-wrapper">
           <div class="format-meta-title">
             <span>Audio Stream (${fmt.ext.toUpperCase()})</span>
             <span class="format-badge audio-badge">${fmt.quality}</span>
           </div>
           <div class="format-subtext">
             <span>Audio Codec: ${fmt.acodec || 'Original Audio'}</span>
-            <span>•</span>
+            <span class="subtext-dot">•</span>
             <span>Lossless / Direct Audio Stream</span>
           </div>
         </div>
@@ -319,7 +319,7 @@ function renderAudioList(formats, originalUrl, title) {
         <span class="format-size">${fmt.sizeFormatted}</span>
         <a href="${downloadLink}" class="btn-download-item" download>
           <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-          Download Audio
+          <span>Download Audio</span>
         </a>
       </div>
     `;
