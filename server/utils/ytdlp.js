@@ -1,3 +1,4 @@
+import { spawn } from 'child_process';
 import { existsSync, readdirSync, statSync, createReadStream, unlink, writeFileSync } from 'fs';
 import os from 'os';
 import path from 'path';
@@ -50,6 +51,18 @@ export function getCookiesArg() {
   return [];
 }
 
+/**
+ * Resolve optional proxy configuration
+ * @returns {string[]}
+ */
+export function getProxyArgs() {
+  const proxy = process.env.HTTP_PROXY || process.env.HTTPS_PROXY || process.env.ALL_PROXY || process.env.PROXY_URL;
+  if (proxy && proxy.trim()) {
+    return ['--proxy', proxy.trim()];
+  }
+  return [];
+}
+
 // Resolve yt-dlp executable path
 export function getYtDlpPath() {
   if (process.env.YTDLP_PATH && existsSync(process.env.YTDLP_PATH)) {
@@ -75,14 +88,15 @@ export function getYtDlpPath() {
  * @returns {Promise<object>}
  */
 export async function extractVideoInfo(url) {
-  return mediaInfoCache.getOrFetch(url, () => runYtDlpExtract(url));
+  return mediaInfoCache.getOrFetch(`ytdlp_${url}`, () => runYtDlpExtract(url));
 }
 
 async function runYtDlpExtract(url) {
   const isYouTube = url.includes('youtube.com/') || url.includes('youtu.be/');
-  // Rotate through client profiles for YouTube to bypass bot verification checks on datacenter IPs
+  // Try standard web client first (with node JS runtime, extracts ALL 4K, 1080p, 720p, 480p, 360p resolutions)
+  // Only rotate through alternative mobile client profiles if YouTube blocks or asks for sign-in
   const clientCombos = isYouTube
-    ? ['android,ios,mweb,web', 'ios,mweb,web', 'mweb,tv_embedded,web', 'android,web']
+    ? [null, 'ios,mweb,web', 'mweb,tv_embedded,web', 'android,web']
     : [null];
 
   let lastError = null;
@@ -120,20 +134,22 @@ function executeYtDlpJson(url, clientCombo = null) {
   return new Promise((resolve, reject) => {
     const ytdlpBin = getYtDlpPath();
     const cookieArgs = getCookiesArg();
+    const proxyArgs = getProxyArgs();
 
     const args = [
       '--dump-json',
       '--no-playlist',
-      '--flat-playlist',
       '--no-warnings',
       '--no-check-certificate',
       '--ignore-errors',
       '--geo-bypass',
       '--skip-download',
-      '--socket-timeout', '20',
-      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+      '--js-runtimes', 'node',
+      '--socket-timeout', '25',
+      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
       '--format-sort', 'vcodec:h264,res,acodec:m4a',
-      ...cookieArgs
+      ...cookieArgs,
+      ...proxyArgs
     ];
 
     if (clientCombo) {
@@ -146,13 +162,13 @@ function executeYtDlpJson(url, clientCombo = null) {
     let stdoutData = '';
     let stderrData = '';
 
-    // Safety timeout: 25 seconds maximum for metadata extraction
+    // Safety timeout: 30 seconds maximum for metadata extraction
     const timeoutTimer = setTimeout(() => {
       if (!proc.killed) {
         proc.kill('SIGKILL');
         reject(new Error('Media analysis timed out. Please try again.'));
       }
-    }, 25000);
+    }, 30000);
 
     proc.stdout.on('data', (chunk) => {
       stdoutData += chunk.toString();
@@ -238,15 +254,22 @@ function processVideoMetadata(raw, originalUrl) {
   const resolutionMap = new Map();
 
   for (const f of rawFormats) {
+    // 1. Exclude storyboard / preview image tracks completely (sb0, sb1, sb2, sb3, mhtml, etc.)
+    const isStoryboard = f.protocol === 'mhtml' ||
+                         f.format_note === 'storyboard' ||
+                         (f.format_id && String(f.format_id).startsWith('sb')) ||
+                         (f.vcodec === 'none' && f.acodec === 'none');
+    if (isStoryboard) continue;
+
     const isExplicitAudio = !f.vcodec || f.vcodec === 'none';
     const hasAudioCodec = f.acodec && f.acodec !== 'none';
-    const isExplicitVideo = (f.vcodec && f.vcodec !== 'none') || f.format_id === 'hd' || f.format_id === 'sd' || f.video_ext === 'mp4' || (f.ext === 'mp4' && !isExplicitAudio);
+    const hasVideoCodec = f.vcodec && f.vcodec !== 'none';
     
     let height = f.height || (f.resolution ? parseInt(f.resolution.split('x')[1], 10) : 0);
     if (!height && f.format_id === 'hd') height = 720;
     if (!height && f.format_id === 'sd') height = 480;
 
-    // Collect Audio only options from stream formats
+    // 2. Collect Audio only options from stream formats
     if (isExplicitAudio && hasAudioCodec) {
       const abr = f.abr ? `${Math.round(f.abr)}k` : (f.format_note || 'Audio');
       const size = f.filesize || f.filesize_approx || (duration && f.tbr ? (f.tbr * 1024 * duration) / 8 : 0);
@@ -261,22 +284,34 @@ function processVideoMetadata(raw, originalUrl) {
         note: f.format_note || `${abr} stream`,
         type: 'audio'
       });
+      continue;
     }
 
-    // Collect Video options
-    if (isExplicitVideo || height) {
-      const resKey = height ? `${height}p` : (f.format_id || 'HD');
+    // 3. Collect Video options (must have real video codec and valid resolution height >= 140)
+    if (hasVideoCodec && height >= 140) {
+      const resKey = `${height}p`;
       const size = f.filesize || f.filesize_approx || (duration && f.tbr ? (f.tbr * 1024 * duration) / 8 : 0);
-      const isProgressive = isExplicitVideo && hasAudioCodec;
+      const isProgressive = hasAudioCodec;
+
+      // Determine label
+      let label = `${height}p`;
+      if (height >= 2160) label = '4K (2160p)';
+      else if (height >= 1440) label = '2K (1440p)';
+      else if (height >= 1080) label = '1080p Full HD';
+      else if (height >= 720) label = '720p HD';
+      else if (height >= 480) label = '480p SD';
+      else if (height >= 360) label = '360p';
+      else if (height >= 240) label = '240p';
+      else if (height >= 144) label = '144p';
 
       const formatItem = {
         formatId: f.format_id,
         formatSelector: (f.format_id === 'hd' || f.format_id === 'sd') 
           ? `${f.format_id}/best` 
           : (isProgressive ? f.format_id : `${f.format_id}+bestaudio/best`),
-        height: height || 720,
+        height: height,
         width: f.width || 0,
-        resolution: height ? `${height}p` : (f.format_id === 'hd' ? '720p HD' : '480p SD'),
+        resolution: label,
         fps: f.fps || 30,
         ext: 'mp4',
         vcodec: f.vcodec || 'h264',
@@ -289,14 +324,22 @@ function processVideoMetadata(raw, originalUrl) {
         type: 'video'
       };
 
-      // Keep best format per resolution height
-      if (!resolutionMap.has(resKey) || (resolutionMap.get(resKey).rawSize < size)) {
+      // Prefer MP4/H264 formats (avc1) or higher bitrate format for the same resolution
+      const isH264 = f.vcodec && (f.vcodec.startsWith('avc') || f.vcodec.startsWith('h264') || f.ext === 'mp4');
+      const existing = resolutionMap.get(resKey);
+      
+      if (!existing) {
         resolutionMap.set(resKey, formatItem);
+      } else {
+        const existingIsH264 = existing.vcodec && (existing.vcodec.startsWith('avc') || existing.vcodec.startsWith('h264') || existing.ext === 'mp4');
+        if ((isH264 && !existingIsH264) || (isH264 === existingIsH264 && size > (existing.rawSize || 0))) {
+          resolutionMap.set(resKey, formatItem);
+        }
       }
     }
   }
 
-  // Convert resolutionMap to sorted list
+  // Convert resolutionMap to sorted list (highest resolution first)
   let sortedVideoFormats = Array.from(resolutionMap.values()).sort((a, b) => (b.height || 0) - (a.height || 0));
 
   // Fallback if no specific video formats were resolved
@@ -307,7 +350,7 @@ function processVideoMetadata(raw, originalUrl) {
         formatSelector: 'bestvideo+bestaudio/best',
         height: 1080,
         width: 1920,
-        resolution: '1080p HD (Best Quality)',
+        resolution: '1080p Full HD (Best Quality)',
         fps: 30,
         ext: 'mp4',
         vcodec: 'h264',
@@ -356,15 +399,16 @@ function processVideoMetadata(raw, originalUrl) {
     ];
   }
 
-  // Add standard preset resolutions for quick access
+  // Add standard preset resolutions for quick access based on available video formats
   const standardHeights = [
-    { label: '4K (2160p)', h: 2160, tag: 'Ultra HD' },
-    { label: '2K (1440p)', h: 1440, tag: 'Quad HD' },
-    { label: '1080p (Full HD)', h: 1080, tag: 'FHD' },
-    { label: '720p (HD)', h: 720, tag: 'HD' },
-    { label: '480p (SD)', h: 480, tag: 'SD' },
+    { label: '4K Ultra HD (2160p)', h: 2160, tag: 'Ultra HD' },
+    { label: '2K Quad HD (1440p)', h: 1440, tag: 'Quad HD' },
+    { label: '1080p Full HD', h: 1080, tag: 'Full HD' },
+    { label: '720p HD', h: 720, tag: 'HD' },
+    { label: '480p SD', h: 480, tag: 'SD' },
     { label: '360p (Mobile)', h: 360, tag: 'SD' },
-    { label: '240p (Economy)', h: 240, tag: 'SD' }
+    { label: '240p (Economy)', h: 240, tag: 'SD' },
+    { label: '144p (Compact)', h: 144, tag: 'SD' }
   ];
 
   for (const std of standardHeights) {
@@ -372,7 +416,7 @@ function processVideoMetadata(raw, originalUrl) {
     if (matchingVideo) {
       presets.push({
         id: `preset_${std.h}`,
-        title: `${std.label}`,
+        title: matchingVideo.resolution,
         badge: std.tag,
         quality: `${std.h}p`,
         type: 'video',
@@ -483,14 +527,22 @@ export async function streamVideoDownload(options, res) {
   res.setHeader('Content-Type', mimeType);
   res.setHeader('Cache-Control', 'no-cache');
 
-  // Direct CDN stream handler (e.g. Instagram progressive MP4 / images, or scraped MP4)
-  if (directUrl && !url) {
-    console.log(`[DIRECT STREAM] Piping from URL: ${directUrl.substring(0, 100)}`);
+  // 1. Direct Stream Handler (e.g. progressive MP4, M3U8, or images)
+  const isDirect = Boolean(directUrl) || formatSelector === 'direct_stream';
+  const targetDirectUrl = directUrl || (url && url.match(/\.(mp4|webm|m3u8|jpg|jpeg|png)(\?|$)/i) ? url : null);
+
+  if (isDirect && targetDirectUrl) {
+    console.log(`[DIRECT STREAM] Piping from URL: ${targetDirectUrl.substring(0, 100)}`);
+    
+    // Audio Extraction from direct URL
     if (isAudioOnly && ext === 'mp3') {
-      // Pipe through FFmpeg with ultrafast preset to extract MP3 audio immediately
       const ffmpegProc = spawn('ffmpeg', [
         '-threads', '0',
-        '-i', directUrl,
+        '-reconnect', '1',
+        '-reconnect_at_eof', '1',
+        '-reconnect_streamed', '1',
+        '-reconnect_delay_max', '5',
+        '-i', targetDirectUrl,
         '-vn',
         '-c:a', 'libmp3lame',
         '-b:a', '320k',
@@ -499,18 +551,42 @@ export async function streamVideoDownload(options, res) {
         'pipe:1'
       ]);
       ffmpegProc.stdout.pipe(res);
-      ffmpegProc.on('error', (e) => console.error('[FFMPEG ERROR]', e));
+      ffmpegProc.on('error', (e) => console.error('[FFMPEG DIRECT ERROR]', e));
       res.on('close', () => { if (!ffmpegProc.killed) ffmpegProc.kill('SIGINT'); });
       return;
     }
 
+    // HLS .m3u8 stream muxing to MP4
+    if (targetDirectUrl.includes('.m3u8')) {
+      console.log('[DIRECT M3U8] Remuxing HLS stream to MP4 on the fly...');
+      const ffmpegProc = spawn('ffmpeg', [
+        '-threads', '0',
+        '-reconnect', '1',
+        '-reconnect_at_eof', '1',
+        '-reconnect_streamed', '1',
+        '-reconnect_delay_max', '5',
+        '-i', targetDirectUrl,
+        '-c', 'copy',
+        '-bsf:a', 'aac_adtstoasc',
+        '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
+        '-f', 'mp4',
+        'pipe:1'
+      ]);
+      ffmpegProc.stdout.pipe(res);
+      ffmpegProc.on('error', (e) => console.error('[FFMPEG M3U8 ERROR]', e));
+      res.on('close', () => { if (!ffmpegProc.killed) ffmpegProc.kill('SIGINT'); });
+      return;
+    }
+
+    // Direct HTTP file piping
     try {
-      const response = await fetch(directUrl, {
+      const response = await fetch(targetDirectUrl, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-          'Referer': directUrl.includes('fbcdn.net') ? 'https://www.facebook.com/' : 'https://www.instagram.com/'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+          'Referer': targetDirectUrl.includes('fbcdn.net') ? 'https://www.facebook.com/' : (url || targetDirectUrl)
         }
       });
+
       if (!response.ok) {
         throw new Error(`Direct download stream failed with status ${response.status}`);
       }
@@ -524,7 +600,6 @@ export async function streamVideoDownload(options, res) {
         res.setHeader('Accept-Ranges', acceptRanges);
       }
 
-      // Zero-copy Node stream piping for maximum transfer speed
       const bodyStream = Readable.fromWeb(response.body);
       bodyStream.pipe(res);
       res.on('close', () => {
@@ -532,41 +607,43 @@ export async function streamVideoDownload(options, res) {
       });
       return;
     } catch (err) {
-      console.error('[DIRECT STREAM ERROR]', err.message);
-      if (!res.headersSent) {
-        res.status(500).send(`Direct stream failed: ${err.message}`);
-      }
-      return;
+      console.warn('[DIRECT STREAM FALLBACK TO YTDLP]', err.message);
+      // Fall through to yt-dlp pipeline
     }
   }
 
-  // High-Speed Temporary File Download Pipeline:
-  // Guarantees 100% valid MP4 with H.264 video + AAC audio and FastStart MOOV atom (ZERO black screen on all players)
+  // 2. High-Speed Temporary File Download Pipeline via yt-dlp
   const ytdlpBin = getYtDlpPath();
-  const safeFormat = formatSelector.includes('/') ? formatSelector : `${formatSelector}/bestvideo[vcodec^=avc]+bestaudio/bestvideo+bestaudio/best`;
+  const cookieArgs = getCookiesArg();
+  const proxyArgs = getProxyArgs();
+  const isYouTube = (url && (url.includes('youtube.com/') || url.includes('youtu.be/')));
+
+  let safeFormat = formatSelector;
+  if (!safeFormat || safeFormat === 'best_quality' || safeFormat === 'direct_stream') {
+    safeFormat = 'bestvideo+bestaudio/best';
+  } else if (!safeFormat.includes('/')) {
+    safeFormat = `${safeFormat}/bestvideo+bestaudio/best`;
+  }
+
   const tempId = `omnifetch_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
   const tempDir = os.tmpdir();
   const tempFileTemplate = path.join(tempDir, `${tempId}.%(ext)s`);
-  const cookieArgs = getCookiesArg();
-  const isYouTube = (url && (url.includes('youtube.com/') || url.includes('youtu.be/')));
 
   const args = [
     '--no-playlist',
     '--no-warnings',
     '--no-check-certificate',
     '--geo-bypass',
+    '--js-runtimes', 'node',
     '--concurrent-fragments', '8',
     '-N', '8',
     '--buffer-size', '64K',
     '--socket-timeout', '25',
-    '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+    '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     '--format-sort', 'vcodec:h264,res,acodec:m4a',
-    ...cookieArgs
+    ...cookieArgs,
+    ...proxyArgs
   ];
-
-  if (isYouTube) {
-    args.push('--extractor-args', 'youtube:player_client=android,ios,mweb,web');
-  }
 
   args.push('-f', safeFormat);
 
@@ -579,7 +656,7 @@ export async function streamVideoDownload(options, res) {
   }
 
   args.push('-o', tempFileTemplate);
-  args.push(url || directUrl);
+  args.push(url || targetDirectUrl);
 
   console.log(`[DOWNLOAD] Starting accelerated download & mux: ${ytdlpBin} ${args.join(' ')}`);
 

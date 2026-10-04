@@ -13,6 +13,15 @@ const archiver = require('archiver');
 
 const router = express.Router();
 
+function safeDecode(val, fallback = '') {
+  if (!val || typeof val !== 'string') return fallback;
+  try {
+    return val.includes('%') ? decodeURIComponent(val) : val;
+  } catch (_) {
+    return val;
+  }
+}
+
 /**
  * GET /api/download
  * Query parameters:
@@ -31,15 +40,15 @@ router.get('/download', (req, res) => {
       return res.status(400).send('Missing media URL parameter.');
     }
 
-    const decodedUrl = url ? decodeURIComponent(url) : '';
-    const decodedDirectUrl = directUrl ? decodeURIComponent(directUrl) : null;
-    const formatSelector = format ? decodeURIComponent(format) : 'best';
+    const decodedUrl = url ? safeDecode(url) : '';
+    const decodedDirectUrl = directUrl ? safeDecode(directUrl) : null;
+    const formatSelector = format ? safeDecode(format) : 'best';
     const extension = (ext || 'mp4').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const videoTitle = title ? decodeURIComponent(title) : 'downloaded_media';
+    const videoTitle = title ? safeDecode(title, 'downloaded_media') : 'downloaded_media';
     const isAudioOnly = isAudio === 'true' || isAudio === '1' || extension === 'mp3' || extension === 'm4a';
 
     // Record download event
-    recordDownload(decodedUrl || 'Direct Media', extension);
+    recordDownload(decodedUrl || decodedDirectUrl || 'Direct Media', extension);
 
     streamVideoDownload(
       {
@@ -71,13 +80,17 @@ router.get('/download-zip', async (req, res) => {
       return res.status(400).send('Missing URL parameter for zip download.');
     }
 
-    const decodedUrl = decodeURIComponent(url);
-    const postTitle = title ? sanitizeDownloadName(decodeURIComponent(title), 'media_album') : 'media_album';
+    const decodedUrl = safeDecode(url);
+    const postTitle = title ? sanitizeDownloadName(safeDecode(title), 'media_album') : 'media_album';
 
     console.log(`[ZIP DOWNLOAD] Starting accelerated batch download for: ${decodedUrl}`);
 
     // Check cache first for instant metadata
-    let mediaData = mediaInfoCache.get(decodedUrl);
+    let mediaData = mediaInfoCache.get(`insta_${decodedUrl}`) ||
+                    mediaInfoCache.get(`linkedin_${decodedUrl}`) ||
+                    mediaInfoCache.get(`scrape_${decodedUrl}`) ||
+                    mediaInfoCache.get(`ytdlp_${decodedUrl}`) ||
+                    mediaInfoCache.get(decodedUrl);
 
     if (!mediaData) {
       if (decodedUrl.includes('instagram.com/')) {

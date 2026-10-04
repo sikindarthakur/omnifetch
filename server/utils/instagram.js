@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename);
  * @returns {Promise<object>}
  */
 export async function extractInstagram(url) {
-  return mediaInfoCache.getOrFetch(url, () => runInstagramExtract(url));
+  return mediaInfoCache.getOrFetch(`insta_${url}`, () => runInstagramExtract(url));
 }
 
 function runInstagramExtract(url) {

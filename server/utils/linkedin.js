@@ -8,7 +8,7 @@ import { mediaInfoCache } from './cache.js';
  * @returns {Promise<object>}
  */
 export async function extractLinkedIn(url) {
-  return mediaInfoCache.getOrFetch(url, () => runLinkedInExtract(url));
+  return mediaInfoCache.getOrFetch(`linkedin_${url}`, () => runLinkedInExtract(url));
 }
 
 async function runLinkedInExtract(url) {
